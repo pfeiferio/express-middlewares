@@ -1,0 +1,64 @@
+{
+  "type": "module",
+  "name": "@pfeiferio/express-middlewares",
+  "version": "1.0.0",
+  "author": "Pascal Pfeifer <pascal@pfeifer.zone>",
+  "license": "MIT",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "description": "Reusable and production-ready middlewares for Express applications.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "express",
+    "middleware",
+    "logging",
+    "morgan",
+    "access-log"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pfeiferio/express-middlewares.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pfeiferio/express-middlewares/issues"
+  },
+  "homepage": "https://github.com/pfeiferio/express-middlewares#readme",
+  "peerDependencies": {
+    "express": "^4 || ^5"
+  },
+  "dependencies": {
+    "morgan": "^1.10.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^18.0.0",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "npm run clean && tsc",
+    "clean": "rm -rf dist",
+    "test": "npm run build && node --test",
+    "test:coverage": "npm run build && node --test --experimental-test-coverage --test-coverage-exclude='test/**'",
+    "test:coverage:c8": "npm run build && npx c8 node --test",
+    "test:coverage:lcov": "npm run build && node --enable-source-maps --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-reporter=lcov --test-reporter-destination=lcov.info",
+    "prepublishOnly": "npm test"
+  }
+}
