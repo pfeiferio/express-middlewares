@@ -1,0 +1,12 @@
+export const LIMIT_1_MB = 1024 * 1024
+export const LIMIT_5_MB = 1024 * 1024 * 5
+export const LIMIT_10_MB = 1024 * 1024 * 10
+export const LIMIT_20_MB = 1024 * 1024 * 20
+export const LIMIT_30_MB = 1024 * 1024 * 30
+export const LIMIT_40_MB = 1024 * 1024 * 40
+export const LIMIT_50_MB = 1024 * 1024 * 50
+export const LIMIT_60_MB = 1024 * 1024 * 60
+export const LIMIT_70_MB = 1024 * 1024 * 70
+export const LIMIT_80_MB = 1024 * 1024 * 80
+export const LIMIT_90_MB = 1024 * 1024 * 90
+export const LIMIT_100_MB = 1024 * 1024 * 100

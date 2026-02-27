@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "@pfeiferio/express-middlewares",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Pascal Pfeifer <pascal@pfeifer.zone>",
   "license": "MIT",
   "sideEffects": false,
@@ -38,27 +38,34 @@
   },
   "homepage": "https://github.com/pfeiferio/express-middlewares#readme",
   "peerDependencies": {
-    "express": "^4 || ^5"
+    "express": "^5",
+    "multer": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "multer": {
+      "optional": true
+    }
   },
   "dependencies": {
     "morgan": "^1.10.1"
   },
   "devDependencies": {
-    "@types/express": "^4.17.17",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.0.0",
     "@types/morgan": "^1.9.10",
-    "@types/node": "^18.0.0",
+    "@types/node": "^25.3.2",
     "typescript": "^5.9.3"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
+    "prepublishOnly": "npm test",
     "build": "npm run clean && tsc",
     "clean": "rm -rf dist",
     "test": "npm run build && node --test",
     "test:coverage": "npm run build && node --test --experimental-test-coverage --test-coverage-exclude='test/**'",
     "test:coverage:c8": "npm run build && npx c8 node --test",
-    "test:coverage:lcov": "npm run build && node --enable-source-maps --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-reporter=lcov --test-reporter-destination=lcov.info",
-    "prepublishOnly": "npm test"
+    "test:coverage:lcov": "npm run build && npx c8 --src src node --enable-source-maps --test"
   }
 }
