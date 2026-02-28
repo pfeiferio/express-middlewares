@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs, {existsSync, mkdtempSync, rmSync, unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {LogStream} from '../dist/access-log/LogStream.js';
+import {LogStream} from '../../dist/access-log/LogStream.js';
 
 let tmpDir;
 

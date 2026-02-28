@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "@pfeiferio/express-middlewares",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Pascal Pfeifer <pascal@pfeifer.zone>",
   "license": "MIT",
   "sideEffects": false,
@@ -27,7 +27,13 @@
     "middleware",
     "logging",
     "morgan",
-    "access-log"
+    "access-log",
+    "body-parser",
+    "multer",
+    "graceful-shutdown",
+    "sigint",
+    "sigterm",
+    "abort-signal"
   ],
   "repository": {
     "type": "git",
@@ -51,9 +57,10 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
-    "@types/multer": "^2.0.0",
     "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.0.0",
     "@types/node": "^25.3.2",
+    "express": "^5.2.1",
     "typescript": "^5.9.3"
   },
   "publishConfig": {

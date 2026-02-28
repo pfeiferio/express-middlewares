@@ -14,10 +14,10 @@ import {
   LIMIT_70_MB,
   LIMIT_80_MB,
   LIMIT_90_MB,
-} from '../dist/body-parser/types/constants.js'
-import {bodyParser} from "../dist/body-parser/index.js";
-import {withRawBody} from "../dist/body-parser/utils/withRawBody.js";
-import {runMiddlewares} from "../dist/body-parser/utils/runMiddlewares.js";
+} from '../../dist/body-parser/types/constants.js'
+import {bodyParser} from "../../dist/body-parser/index.js";
+import {withRawBody} from "../../dist/body-parser/utils/withRawBody.js";
+import {runMiddlewares} from "../../dist/body-parser/utils/runMiddlewares.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

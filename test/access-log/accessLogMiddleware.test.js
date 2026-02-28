@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {existsSync, mkdtempSync, readdirSync, readFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {accessLogMiddleware} from '../dist/access-log/accessLogMiddleware.js';
-import {LogStream} from '../dist/access-log/LogStream.js';
+import {accessLogMiddleware} from '../../dist/access-log/accessLogMiddleware.js';
+import {LogStream} from '../../dist/access-log/LogStream.js';
 
 let tmpDir;
 

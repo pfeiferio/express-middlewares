@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {defaultFilename, generateLogPath} from '../dist/access-log/generateLogPath.js';
+import {defaultFilename, generateLogPath} from '../../dist/access-log/generateLogPath.js';
 
 test('generateLogPath: throws when filename is empty', () => {
   assert.throws(

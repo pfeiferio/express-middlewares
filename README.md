@@ -12,6 +12,7 @@
 
 - **accessLogMiddleware** – Flexible HTTP access logging powered by morgan with automatic daily file rotation.
 - **bodyParser** – Unified body parsing for JSON, URL-encoded, multipart and raw/text requests.
+- **gracefulShutdownMiddleware** – Graceful shutdown handling with pending request draining.
 
 ---
 
@@ -33,9 +34,15 @@ npm install multer
 
 ```ts
 import express from "express"
-import {accessLogMiddleware, bodyParser} from "@pfeiferio/express-middlewares"
+import {
+  accessLogMiddleware,
+  bodyParser,
+  gracefulShutdownMiddleware,
+  createShutdownSignal
+} from "@pfeiferio/express-middlewares"
 
 const app = express()
+const server = app.listen(3000)
 
 app.use(
   accessLogMiddleware({
@@ -47,6 +54,77 @@ app.use(
 )
 
 app.use(bodyParser())
+
+const signal = createShutdownSignal((sig) => console.log('received', sig))
+
+app.use(gracefulShutdownMiddleware({
+  signal,
+  onDrain: () => server.close(() => process.exit(0))
+}))
+```
+
+---
+
+## gracefulShutdownMiddleware
+
+Tracks pending requests and drains them before allowing the process to exit. New incoming requests are rejected once
+shutdown is initiated.
+
+### Basic usage
+
+```ts
+import {gracefulShutdownMiddleware, createShutdownSignal} from "@pfeiferio/express-middlewares"
+
+const server = app.listen(3000)
+const signal = createShutdownSignal()
+
+app.use(gracefulShutdownMiddleware({
+  signal,
+  onDrain: () => server.close(() => process.exit(0))
+}))
+```
+
+### Configuration
+
+| Option        | Type                                                              | Default           | Description                                                                               |
+|---------------|-------------------------------------------------------------------|-------------------|-------------------------------------------------------------------------------------------|
+| `signal`      | `AbortSignal`                                                     | —                 | Required. Use `createShutdownSignal()` or provide your own `AbortController.signal`       |
+| `timeout`     | `number`                                                          | `10000`           | Timeout in ms before forced drain. `-1` = immediate, `0` = wait forever, `>0` = wait X ms |
+| `onDrain`     | `(info: { pendingRequests: number, isTimeout: boolean }) => void` | —                 | Required. Called when all pending requests are drained or timeout is reached              |
+| `onReject`    | `RequestHandler`                                                  | 503 JSON response | Called for every incoming request while shutting down                                     |
+| `forceReject` | `boolean`                                                         | `false`           | Forces all requests to be rejected immediately. For testing your `onReject` handler only  |
+
+### createShutdownSignal
+
+Helper that listens to `SIGINT` and `SIGTERM` and returns an `AbortSignal`. After the first signal, all listeners are
+removed — a second signal triggers Node's default behavior (hard kill).
+
+```ts
+const signal = createShutdownSignal(
+  (sig) => console.log('received', sig), // optional callback
+  ['SIGINT', 'SIGTERM']                  // optional signals, default: ['SIGINT', 'SIGTERM']
+)
+```
+
+### Custom onReject
+
+```ts
+app.use(gracefulShutdownMiddleware({
+  signal,
+  onDrain: () => server.close(() => process.exit(0)),
+  onReject: (req, res) => res.status(503).json({error: 'server shutting down', retryAfter: 30})
+}))
+```
+
+### Testing your onReject handler
+
+```ts
+app.use(gracefulShutdownMiddleware({
+  signal,
+  onDrain: () => server.close(() => process.exit(0)),
+  onReject: myCustomRejectHandler,
+  forceReject: process.env.NODE_ENV === 'test'
+}))
 ```
 
 ---
