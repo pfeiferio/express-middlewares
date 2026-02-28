@@ -2,7 +2,7 @@
 
 > A collection of reusable middlewares for Express applications.
 
-[![npm version](https://badge.fury.io/js/%40pfeiferio%2Fexpress-middlewares.svg)](https://www.npmjs.com/package/@pfeiferio/express-middlewares)
+[![npm version](https://img.shields.io/npm/v/@pfeiferio/express-middlewares.svg)](https://www.npmjs.com/package/@pfeiferio/express-middlewares)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
