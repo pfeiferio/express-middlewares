@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "@pfeiferio/express-middlewares",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "Pascal Pfeifer <pascal@pfeifer.zone>",
   "license": "MIT",
   "sideEffects": false,
