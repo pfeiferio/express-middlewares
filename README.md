@@ -38,10 +38,12 @@ import {
   accessLogMiddleware,
   bodyParser,
   gracefulShutdownMiddleware,
-  createShutdownSignal
+  createShutdownSignal,
+  requestIdMiddleware
 } from "@pfeiferio/express-middlewares"
 
 const app = express()
+const signal = createShutdownSignal((sig) => console.log('received', sig))
 const server = app.listen(3000)
 
 app.use(
@@ -52,15 +54,13 @@ app.use(
     skip: req => req.path === "/health"
   })
 )
-
 app.use(bodyParser())
-
-const signal = createShutdownSignal((sig) => console.log('received', sig))
-
 app.use(gracefulShutdownMiddleware({
   signal,
   onDrain: () => server.close(() => process.exit(0))
 }))
+app.use(requestIdMiddleware())
+
 ```
 
 ---
@@ -126,6 +126,60 @@ app.use(gracefulShutdownMiddleware({
   forceReject: process.env.NODE_ENV === 'test'
 }))
 ```
+
+---
+
+## requestIdMiddleware
+
+Assigns a unique `requestId` to every request and propagates a full request chain across services via HTTP headers.
+Also tracks a `correlationId` that is forwarded unchanged through the entire call chain.
+
+### Basic usage
+
+```ts
+app.use(requestIdMiddleware())
+
+app.get('/', (req, res) => {
+  console.log(req.requestId)     // UUID for this request
+  console.log(req.correlationId) // forwarded or newly generated
+  console.log(req.requestChain)  // ['svc-a-id', 'svc-b-id', 'this-id']
+})
+```
+
+### Chain propagation
+
+Each service appends its `requestId` to the `x-request-chain` header. When calling downstream services,
+forward the header as-is — the next service will append its own ID:
+
+```
+Service A → x-request-chain: id-a
+Service B → x-request-chain: id-a,id-b
+Service C → x-request-chain: id-a,id-b,id-c
+```
+
+This gives you the full hop trace on every request. `req.requestChain.length` tells you how many services
+were involved.
+
+### Configuration
+
+| Option                    | Type      | Default             | Description                                                                  |
+|---------------------------|-----------|---------------------|------------------------------------------------------------------------------|
+| `chainHeaderName`         | `string`  | `x-request-chain`   | Header used to propagate the chain                                           |
+| `requestIdHeaderName`     | `string`  | `x-request-id`      | Header used to forward the previous service's request ID into the chain      |
+| `correlationIdHeaderName` | `string`  | `x-correlation-id`  | Header used to propagate the correlation ID                                  |
+| `setResponseHeader`       | `boolean` | `true`              | Write chain, requestId and correlationId back as response headers            |
+| `maxChainLength`          | `number`  | `30`                | Max number of IDs in the chain. `0` disables chain tracking entirely         |
+| `maxIdLength`             | `number`  | `64`                | Max length per ID. IDs exceeding this cause the entire chain to be discarded |
+
+### Security
+
+The chain header is strictly validated on every request:
+
+- Only alphanumeric characters, spaces, `-`, `_`, `:` and `#` are allowed
+- IDs exceeding `maxIdLength` cause the entire chain to be discarded
+- Chains exceeding `maxChainLength` are rejected
+- Oversized headers are rejected before parsing
+- Malformed input (empty segments, invalid characters, newlines) results in an empty chain
 
 ---
 
