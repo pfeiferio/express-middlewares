@@ -1,5 +1,10 @@
 import type {RequestHandler} from "express";
 
+export type DrainInfo = {
+  pendingRequests: number
+  isTimeout: boolean
+}
+
 export type GracefulShutdownOptions = {
   /**
    * AbortSignal to trigger graceful shutdown.
@@ -19,7 +24,7 @@ export type GracefulShutdownOptions = {
   /**
    * Called when all pending requests have been drained or the timeout has been reached.
    */
-  onDrain: (info: { pendingRequests: number, isTimeout: boolean }) => void
+  onDrain: (info: DrainInfo) => void
 
   /**
    * Called for every incoming request while the server is shutting down.

@@ -1,7 +1,6 @@
 import type {NextFunction, Request, RequestHandler, Response} from "express";
 
 export function runMiddlewares(middlewares: RequestHandler[], req: Request, res: Response, next: NextFunction) {
-  req.groupedFiles = {}
   middlewares = [...middlewares]
   const run = (err?: unknown) => {
     if (err) return next(err)

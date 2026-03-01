@@ -17,7 +17,8 @@ import {
 } from '../../dist/body-parser/types/constants.js'
 import {bodyParser} from "../../dist/body-parser/index.js";
 import {withRawBody} from "../../dist/body-parser/utils/withRawBody.js";
-import {runMiddlewares} from "../../dist/body-parser/utils/runMiddlewares.js";
+import {runMiddlewares} from "../../dist/utils/runMiddlewares.js";
+import {applyMiddlewares} from "../../dist/utils/applyMiddlewares.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

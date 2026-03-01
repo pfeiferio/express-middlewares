@@ -5,7 +5,7 @@ import {jsonMiddleware} from "./middlewares/JsonMiddleware.js";
 import {urlEncodedMiddleware} from "./middlewares/UrlEncodedMiddleware.js";
 import {multipartMiddleware} from "./middlewares/MultipartMiddleware.js";
 import {rawMiddleware} from "./middlewares/RawMiddleware.js";
-import {runMiddlewares} from "./utils/runMiddlewares.js";
+import {runMiddlewares} from "../utils/runMiddlewares.js";
 
 export function bodyParser(options: BodyParserOptions = {}): RequestHandler {
 
@@ -50,6 +50,8 @@ export function bodyParser(options: BodyParserOptions = {}): RequestHandler {
   if (multipartOptions !== false) multipartMiddleware(middlewares, options, multipartOptions)
   if (raw !== false) rawMiddleware(middlewares, options, raw)
 
-  return (req: Request, res: Response, next: NextFunction) =>
-    runMiddlewares(middlewares, req, res, next)
+  return (req: Request, res: Response, next: NextFunction) => {
+    req.groupedFiles = {}
+    return runMiddlewares(middlewares, req, res, next)
+  }
 }

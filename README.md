@@ -13,6 +13,8 @@
 - **accessLogMiddleware** – Flexible HTTP access logging powered by morgan with automatic daily file rotation.
 - **bodyParser** – Unified body parsing for JSON, URL-encoded, multipart and raw/text requests.
 - **gracefulShutdownMiddleware** – Graceful shutdown handling with pending request draining.
+- **requestIdMiddleware** – Request ID and correlation ID tracking with full chain propagation across services.
+- **applyMiddlewares** – Unified setup helper that wires all middlewares in a single call.
 
 ---
 
@@ -63,6 +65,29 @@ app.use(requestIdMiddleware())
 
 ```
 
+---
+
+### Quick setup with applyMiddlewares
+
+```ts
+import express from "express"
+import {applyMiddlewares, createShutdownSignal} from "@pfeiferio/express-middlewares"
+
+const app = express()
+const signal = createShutdownSignal((sig) => console.log('received', sig))
+const server = {value: null}
+
+app.use(applyMiddlewares({
+  signal,
+  onDrain: () => server.value?.close(() => process.exit(0)),
+  accessLog: {format: "combined", output: "file", path: "./logs"},
+  bodyParser: {jsonLimit: LIMIT_10_MB},
+  requestId: {},
+  // gracefulShutdown: { timeout: 30000 }  // optional overrides
+}))
+
+server.value = app.listen(3000)
+```
 ---
 
 ## gracefulShutdownMiddleware
@@ -162,14 +187,14 @@ were involved.
 
 ### Configuration
 
-| Option                    | Type      | Default             | Description                                                                  |
-|---------------------------|-----------|---------------------|------------------------------------------------------------------------------|
-| `chainHeaderName`         | `string`  | `x-request-chain`   | Header used to propagate the chain                                           |
-| `requestIdHeaderName`     | `string`  | `x-request-id`      | Header used to forward the previous service's request ID into the chain      |
-| `correlationIdHeaderName` | `string`  | `x-correlation-id`  | Header used to propagate the correlation ID                                  |
-| `setResponseHeader`       | `boolean` | `true`              | Write chain, requestId and correlationId back as response headers            |
-| `maxChainLength`          | `number`  | `30`                | Max number of IDs in the chain. `0` disables chain tracking entirely         |
-| `maxIdLength`             | `number`  | `64`                | Max length per ID. IDs exceeding this cause the entire chain to be discarded |
+| Option                    | Type      | Default            | Description                                                                  |
+|---------------------------|-----------|--------------------|------------------------------------------------------------------------------|
+| `chainHeaderName`         | `string`  | `x-request-chain`  | Header used to propagate the chain                                           |
+| `requestIdHeaderName`     | `string`  | `x-request-id`     | Header used to forward the previous service's request ID into the chain      |
+| `correlationIdHeaderName` | `string`  | `x-correlation-id` | Header used to propagate the correlation ID                                  |
+| `setResponseHeader`       | `boolean` | `true`             | Write chain, requestId and correlationId back as response headers            |
+| `maxChainLength`          | `number`  | `30`               | Max number of IDs in the chain. `0` disables chain tracking entirely         |
+| `maxIdLength`             | `number`  | `64`               | Max length per ID. IDs exceeding this cause the entire chain to be discarded |
 
 ### Security
 
