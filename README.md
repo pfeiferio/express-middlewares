@@ -12,6 +12,7 @@
 
 - **accessLogMiddleware** – Flexible HTTP access logging powered by morgan with automatic daily file rotation.
 - **bodyParser** – Unified body parsing for JSON, URL-encoded, multipart and raw/text requests.
+- **csrfMiddleware** – Short-lived, single-use CSRF tokens bound to browser context, built for multi-instance deployments.
 - **gracefulShutdownMiddleware** – Graceful shutdown handling with pending request draining.
 - **requestIdMiddleware** – Request ID and correlation ID tracking with full chain propagation across services.
 - **applyMiddlewares** – Unified setup helper that wires all middlewares in a single call.
@@ -36,9 +37,11 @@ npm install multer
 
 ```ts
 import express from "express"
+import cookieParser from "cookie-parser"
 import {
   accessLogMiddleware,
   bodyParser,
+  csrfMiddleware,
   gracefulShutdownMiddleware,
   createShutdownSignal,
   requestIdMiddleware
@@ -48,6 +51,7 @@ const app = express()
 const signal = createShutdownSignal((sig) => console.log('received', sig))
 const server = app.listen(3000)
 
+app.use(requestIdMiddleware())
 app.use(
   accessLogMiddleware({
     format: "combined",
@@ -57,12 +61,12 @@ app.use(
   })
 )
 app.use(bodyParser())
+app.use(cookieParser())
+app.use(csrfMiddleware({csrfSecretCookie: {name: '__csrf'}}))
 app.use(gracefulShutdownMiddleware({
   signal,
   onDrain: () => server.close(() => process.exit(0))
 }))
-app.use(requestIdMiddleware())
-
 ```
 
 ---
@@ -83,11 +87,29 @@ app.use(applyMiddlewares({
   accessLog: {format: "combined", output: "file", path: "./logs"},
   bodyParser: {jsonLimit: LIMIT_10_MB},
   requestId: {},
+  cookieParser: true,
+  csrf: {csrfSecretCookie: {name: '__csrf'}},
   // gracefulShutdown: { timeout: 30000 }  // optional overrides
 }))
 
 server.value = app.listen(3000)
 ```
+
+`applyMiddlewares` wires middlewares in this fixed order: `requestId` → `accessLog` → `bodyParser` → `cookieParser` → `csrf` → `gracefulShutdown`.
+
+### applyMiddlewares options
+
+| Option             | Type                                                            | Default | Description                                                                                       |
+|--------------------|-----------------------------------------------------------------|---------|---------------------------------------------------------------------------------------------------|
+| `signal`           | `AbortSignal`                                                   | —       | Required when `gracefulShutdown` is enabled. Use `createShutdownSignal()`                         |
+| `onDrain`          | `(info: DrainInfo) => void`                                     | —       | Required when `gracefulShutdown` is enabled. Called when all pending requests have drained         |
+| `accessLog`        | `AccessLogOptions \| false`                                     | `{}`    | Options for `accessLogMiddleware`. Set to `false` to disable                                      |
+| `bodyParser`       | `BodyParserOptions \| false`                                    | `{}`    | Options for `bodyParser`. Set to `false` to disable                                               |
+| `cookieParser`     | `boolean \| { secret?: string \| string[], options?: object }` | `true`  | Enable `cookie-parser`. Pass `false` to disable (requires `csrf.csrfSecretCookie.cookieReader`)   |
+| `csrf`             | `CsrfMiddlewareOptions \| false`                               | —       | Options for `csrfMiddleware`. Omit or set to `false` to disable                                   |
+| `gracefulShutdown` | `GracefulShutdownOptions \| false`                              | `{}`    | Options for `gracefulShutdownMiddleware`. Set to `false` to disable                               |
+| `requestId`        | `RequestChainOptions \| false`                                  | `{}`    | Options for `requestIdMiddleware`. Set to `false` to disable                                      |
+
 ---
 
 ## gracefulShutdownMiddleware
@@ -303,6 +325,43 @@ app.use(bodyParser({jsonLimit: LIMIT_10_MB, multipartLimit: LIMIT_50_MB}))
 
 Available: `LIMIT_1_MB`, `LIMIT_5_MB`, `LIMIT_10_MB`, `LIMIT_20_MB`, `LIMIT_30_MB`, `LIMIT_40_MB`, `LIMIT_50_MB`,
 `LIMIT_60_MB`, `LIMIT_70_MB`, `LIMIT_80_MB`, `LIMIT_90_MB`, `LIMIT_100_MB`.
+
+---
+
+## csrfMiddleware
+
+Short-lived, single-use CSRF tokens for Express — bound to browser context and built for multi-instance deployments.
+A modern, dependency-free alternative to the deprecated [csurf](https://www.npmjs.com/package/csurf) package.
+
+Re-exported from [`@pfeiferio/express-csrf`](https://www.npmjs.com/package/@pfeiferio/express-csrf).
+For full documentation see the [express-csrf README](https://github.com/pfeiferio/express-csrf#readme).
+
+### Usage with applyMiddlewares
+
+When using `applyMiddlewares`, `cookie-parser` is registered automatically when `csrf` is enabled — no manual setup required:
+
+```ts
+app.use(applyMiddlewares({
+  csrf: {csrfSecretCookie: {name: '__csrf'}},
+  // cookieParser is enabled automatically
+}))
+```
+
+To disable `cookie-parser` (e.g. when using a custom `cookieReader`):
+
+```ts
+app.use(applyMiddlewares({
+  csrf: {
+    csrfSecretCookie: {
+      name: '__csrf',
+      cookieReader: (req) => req.signedCookies
+    }
+  },
+  cookieParser: false
+}))
+```
+
+The `signal` from `applyMiddlewares` is automatically forwarded to `csrfMiddleware` — no need to pass it manually.
 
 ---
 
