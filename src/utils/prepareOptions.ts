@@ -30,5 +30,12 @@ export const prepareOptions = (options: ApplyMiddlewaresOptions): ApplyMiddlewar
     }
   }
 
+  if (options.requestId !== false && options.accessLog !== false) {
+    const accessLogOptions = {...(options.accessLog || {})}
+    accessLogOptions.includeRequestId ??= true
+    accessLogOptions.includeCorrelationId ??= true
+    options.accessLog = accessLogOptions
+  }
+
   return options
 }
