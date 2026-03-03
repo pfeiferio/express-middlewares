@@ -12,7 +12,9 @@
 
 - **accessLogMiddleware** – Flexible HTTP access logging powered by morgan with automatic daily file rotation.
 - **bodyParser** – Unified body parsing for JSON, URL-encoded, multipart and raw/text requests.
-- **csrfMiddleware** – Short-lived, single-use CSRF tokens bound to browser context, built for multi-instance deployments.
+- **csrfMiddleware** – Short-lived, single-use CSRF tokens bound to browser context, built for multi-instance
+  deployments.
+- **fullUrl** – Attaches `req.fullUrl` and `req.hostUrl` to every request.
 - **gracefulShutdownMiddleware** – Graceful shutdown handling with pending request draining.
 - **requestIdMiddleware** – Request ID and correlation ID tracking with full chain propagation across services.
 - **applyMiddlewares** – Unified setup helper that wires all middlewares in a single call.
@@ -42,6 +44,7 @@ import {
   accessLogMiddleware,
   bodyParser,
   csrfMiddleware,
+  fullUrl,
   gracefulShutdownMiddleware,
   createShutdownSignal,
   requestIdMiddleware
@@ -51,6 +54,7 @@ const app = express()
 const signal = createShutdownSignal((sig) => console.log('received', sig))
 const server = app.listen(3000)
 
+app.use(fullUrl())
 app.use(requestIdMiddleware())
 app.use(
   accessLogMiddleware({
@@ -95,20 +99,22 @@ app.use(applyMiddlewares({
 server.value = app.listen(3000)
 ```
 
-`applyMiddlewares` wires middlewares in this fixed order: `requestId` → `accessLog` → `bodyParser` → `cookieParser` → `csrf` → `gracefulShutdown`.
+`applyMiddlewares` wires middlewares in this fixed order: `fullUrl` → `requestId` → `accessLog` → `bodyParser` →
+`cookieParser` → `csrf` → `gracefulShutdown`.
 
 ### applyMiddlewares options
 
-| Option             | Type                                                            | Default | Description                                                                                       |
-|--------------------|-----------------------------------------------------------------|---------|---------------------------------------------------------------------------------------------------|
-| `signal`           | `AbortSignal`                                                   | —       | Required when `gracefulShutdown` is enabled. Use `createShutdownSignal()`                         |
-| `onDrain`          | `(info: DrainInfo) => void`                                     | —       | Required when `gracefulShutdown` is enabled. Called when all pending requests have drained         |
-| `accessLog`        | `AccessLogOptions \| false`                                     | `{}`    | Options for `accessLogMiddleware`. Set to `false` to disable                                      |
-| `bodyParser`       | `BodyParserOptions \| false`                                    | `{}`    | Options for `bodyParser`. Set to `false` to disable                                               |
-| `cookieParser`     | `boolean \| { secret?: string \| string[], options?: object }` | `true`  | Enable `cookie-parser`. Pass `false` to disable (requires `csrf.csrfSecretCookie.cookieReader`)   |
-| `csrf`             | `CsrfMiddlewareOptions \| false`                               | —       | Options for `csrfMiddleware`. Omit or set to `false` to disable                                   |
-| `gracefulShutdown` | `GracefulShutdownOptions \| false`                              | `{}`    | Options for `gracefulShutdownMiddleware`. Set to `false` to disable                               |
-| `requestId`        | `RequestChainOptions \| false`                                  | `{}`    | Options for `requestIdMiddleware`. Set to `false` to disable                                      |
+| Option             | Type                                                           | Default | Description                                                                                     |
+|--------------------|----------------------------------------------------------------|---------|-------------------------------------------------------------------------------------------------|
+| `signal`           | `AbortSignal`                                                  | —       | Required when `gracefulShutdown` is enabled. Use `createShutdownSignal()`                       |
+| `onDrain`          | `(info: DrainInfo) => void`                                    | —       | Required when `gracefulShutdown` is enabled. Called when all pending requests have drained      |
+| `fullUrl`          | `boolean`                                                      | `true`  | Attach `req.fullUrl` and `req.hostUrl` to every request. Set to `false` to disable              |
+| `accessLog`        | `AccessLogOptions \| false`                                    | `{}`    | Options for `accessLogMiddleware`. Set to `false` to disable                                    |
+| `bodyParser`       | `BodyParserOptions \| false`                                   | `{}`    | Options for `bodyParser`. Set to `false` to disable                                             |
+| `cookieParser`     | `boolean \| { secret?: string \| string[], options?: object }` | `true`  | Enable `cookie-parser`. Pass `false` to disable (requires `csrf.csrfSecretCookie.cookieReader`) |
+| `csrf`             | `CsrfMiddlewareOptions \| false`                               | —       | Options for `csrfMiddleware`. Omit or set to `false` to disable                                 |
+| `gracefulShutdown` | `GracefulShutdownOptions \| false`                             | `{}`    | Options for `gracefulShutdownMiddleware`. Set to `false` to disable                             |
+| `requestId`        | `RequestChainOptions \| false`                                 | `{}`    | Options for `requestIdMiddleware`. Set to `false` to disable                                    |
 
 ---
 
@@ -338,7 +344,8 @@ For full documentation see the [express-csrf README](https://github.com/pfeiferi
 
 ### Usage with applyMiddlewares
 
-When using `applyMiddlewares`, `cookie-parser` is registered automatically when `csrf` is enabled — no manual setup required:
+When using `applyMiddlewares`, `cookie-parser` is registered automatically when `csrf` is enabled — no manual setup
+required:
 
 ```ts
 app.use(applyMiddlewares({
@@ -409,6 +416,25 @@ accessLogMiddleware({
   filename: () => `app_${new Date().toISOString().slice(0, 10)}.log`
 })
 ```
+
+---
+
+## fullUrl
+
+Attaches `req.fullUrl` and `req.hostUrl` to every request.
+
+```ts
+app.use(fullUrl())
+
+app.get('/', (req, res) => {
+  console.log(req.fullUrl)  // https://example.com/api/test?foo=bar
+  console.log(req.hostUrl)  // https://example.com
+})
+```
+
+> **Note:** `req.fullUrl` relies on `req.protocol` and `req.host`. Behind a reverse proxy, ensure your proxy forwards
+> `X-Forwarded-Proto` and `X-Forwarded-Host` correctly, and set `trust proxy` accordingly. If the proxy omits the port
+> from `X-Forwarded-Host`, `req.fullUrl` will not include it.
 
 ---
 

@@ -15,10 +15,9 @@ import {
   LIMIT_80_MB,
   LIMIT_90_MB,
 } from '../../dist/body-parser/types/constants.js'
-import {bodyParser} from "../../dist/body-parser/index.js";
+import {bodyParserMiddleware} from "../../dist/body-parser/index.js";
 import {withRawBody} from "../../dist/body-parser/utils/withRawBody.js";
 import {runMiddlewares} from "../../dist/utils/runMiddlewares.js";
-import {applyMiddlewares} from "../../dist/utils/applyMiddlewares.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -157,14 +156,14 @@ describe('runMiddlewares', () => {
 describe('bodyParser – conflict checks', () => {
   it('throws when jsonLimit and json.limit are both set', () => {
     assert.throws(
-      () => bodyParser({jsonLimit: LIMIT_10_MB, middleware: {json: {limit: '10mb'}}}),
+      () => bodyParserMiddleware({jsonLimit: LIMIT_10_MB, middleware: {json: {limit: '10mb'}}}),
       /jsonLimit.*json\.limit/i,
     )
   })
 
   it('throws when multipartLimit and multipart.limits.fileSize are both set', () => {
     assert.throws(
-      () => bodyParser({
+      () => bodyParserMiddleware({
         multipartLimit: LIMIT_50_MB,
         middleware: {multipart: {multer: mockMulter([]), limits: {fileSize: LIMIT_50_MB}}}
       }),
@@ -174,7 +173,7 @@ describe('bodyParser – conflict checks', () => {
 
   it('throws when multipart.multer is missing', () => {
     assert.throws(
-      () => bodyParser({middleware: {multipart: {}}}),
+      () => bodyParserMiddleware({middleware: {multipart: {}}}),
       /multer.*required/i,
     )
   })
@@ -184,28 +183,28 @@ describe('bodyParser – conflict checks', () => {
 
 describe('bodyParser – defaults', () => {
   it('calls next() without error for empty request', async () => {
-    const {err} = await runMw(bodyParser(), mockReq())
+    const {err} = await runMw(bodyParserMiddleware(), mockReq())
     assert.equal(err, null)
   })
 
   it('json enabled by default – calls next()', async () => {
-    const {err} = await runMw(bodyParser(), mockReq({headers: {'content-type': 'application/json'}}))
+    const {err} = await runMw(bodyParserMiddleware(), mockReq({headers: {'content-type': 'application/json'}}))
     assert.equal(err, null)
   })
 
   it('urlencoded enabled by default – calls next()', async () => {
-    const {err} = await runMw(bodyParser(), mockReq({headers: {'content-type': 'application/x-www-form-urlencoded'}}))
+    const {err} = await runMw(bodyParserMiddleware(), mockReq({headers: {'content-type': 'application/x-www-form-urlencoded'}}))
     assert.equal(err, null)
   })
 
   it('multipart disabled by default – groupedFiles is an object', async () => {
     const req = mockReq({headers: {'content-type': 'multipart/form-data'}})
-    await runMw(bodyParser(), req)
+    await runMw(bodyParserMiddleware(), req)
     assert.deepEqual(req.groupedFiles, {})
   })
 
   it('raw disabled by default – calls next()', async () => {
-    const {err} = await runMw(bodyParser(), mockReq({headers: {'content-type': 'application/octet-stream'}}))
+    const {err} = await runMw(bodyParserMiddleware(), mockReq({headers: {'content-type': 'application/octet-stream'}}))
     assert.equal(err, null)
   })
 })
@@ -215,13 +214,13 @@ describe('bodyParser – defaults', () => {
 describe('bodyParser – disable parsers', () => {
   it('json: false – body stays undefined', async () => {
     const req = mockReq({headers: {'content-type': 'application/json'}})
-    await runMw(bodyParser({middleware: {json: false}}), req)
+    await runMw(bodyParserMiddleware({middleware: {json: false}}), req)
     assert.equal(req.body, undefined)
   })
 
   it('urlencoded: false – calls next()', async () => {
     const req = mockReq({headers: {'content-type': 'application/x-www-form-urlencoded'}})
-    const {err} = await runMw(bodyParser({middleware: {urlencoded: false}}), req)
+    const {err} = await runMw(bodyParserMiddleware({middleware: {urlencoded: false}}), req)
     assert.equal(err, null)
   })
 })
@@ -230,26 +229,26 @@ describe('bodyParser – disable parsers', () => {
 
 describe('bodyParser – limits', () => {
   it('accepts jsonLimit without error', () => {
-    assert.doesNotThrow(() => bodyParser({jsonLimit: LIMIT_10_MB}))
+    assert.doesNotThrow(() => bodyParserMiddleware({jsonLimit: LIMIT_10_MB}))
   })
 
   it('accepts json.limit without error', () => {
-    assert.doesNotThrow(() => bodyParser({middleware: {json: {limit: '10mb'}}}))
+    assert.doesNotThrow(() => bodyParserMiddleware({middleware: {json: {limit: '10mb'}}}))
   })
 
   it('accepts multipartLimit without error', () => {
-    assert.doesNotThrow(() => bodyParser({
+    assert.doesNotThrow(() => bodyParserMiddleware({
       multipartLimit: LIMIT_50_MB,
       middleware: {multipart: {multer: mockMulter([])}}
     }))
   })
 
   it('jsonLimit null – no limit applied', () => {
-    assert.doesNotThrow(() => bodyParser({jsonLimit: null, middleware: {json: {}}}))
+    assert.doesNotThrow(() => bodyParserMiddleware({jsonLimit: null, middleware: {json: {}}}))
   })
 
   it('multipartLimit null – no limit applied', () => {
-    assert.doesNotThrow(() => bodyParser({multipartLimit: null, middleware: {multipart: {multer: mockMulter([])}}}))
+    assert.doesNotThrow(() => bodyParserMiddleware({multipartLimit: null, middleware: {multipart: {multer: mockMulter([])}}}))
   })
 })
 
@@ -264,7 +263,7 @@ describe('multipartMiddleware – groupedFiles', () => {
     ]
 
     const req = mockReq()
-    const mw = bodyParser({
+    const mw = bodyParserMiddleware({
       middleware: {
         multipart: {
           multer: mockMulter(fakeFiles),
@@ -281,7 +280,7 @@ describe('multipartMiddleware – groupedFiles', () => {
 
   it('does not fill groupedFiles when req.files is not an array', async () => {
     const req = mockReq()
-    const mw = bodyParser({
+    const mw = bodyParserMiddleware({
       middleware: {
         multipart: {
           multer: mockMulter(undefined)
@@ -300,7 +299,7 @@ describe('multipartMiddleware – groupedFiles', () => {
 describe('bodyParser – rawBody', () => {
   it('json – rawBody: true – calls next()', async () => {
     const {err} = await runMw(
-      bodyParser({rawBody: true}),
+      bodyParserMiddleware({rawBody: true}),
       mockReq({headers: {'content-type': 'application/json'}}),
     )
     assert.equal(err, null)
@@ -308,7 +307,7 @@ describe('bodyParser – rawBody', () => {
 
   it('urlencoded – rawBody: true – calls next()', async () => {
     const {err} = await runMw(
-      bodyParser({rawBody: true}),
+      bodyParserMiddleware({rawBody: true}),
       mockReq({headers: {'content-type': 'application/x-www-form-urlencoded'}}),
     )
     assert.equal(err, null)
@@ -316,7 +315,7 @@ describe('bodyParser – rawBody', () => {
 
   it('raw – rawBody: true – calls next()', async () => {
     const {err} = await runMw(
-      bodyParser({rawBody: true, middleware: {raw: {}}}),
+      bodyParserMiddleware({rawBody: true, middleware: {raw: {}}}),
       mockReq({headers: {'content-type': 'application/octet-stream'}}),
     )
     assert.equal(err, null)
@@ -328,7 +327,7 @@ describe('bodyParser – rawBody', () => {
 describe('bodyParser – raw enabled', () => {
   it('raw: {} – calls next()', async () => {
     const {err} = await runMw(
-      bodyParser({middleware: {raw: {}}}),
+      bodyParserMiddleware({middleware: {raw: {}}}),
       mockReq({headers: {'content-type': 'application/octet-stream'}}),
     )
     assert.equal(err, null)
@@ -336,7 +335,7 @@ describe('bodyParser – raw enabled', () => {
 
   it('raw: {} with rawBody: false – calls next()', async () => {
     const {err} = await runMw(
-      bodyParser({rawBody: false, middleware: {raw: {}}}),
+      bodyParserMiddleware({rawBody: false, middleware: {raw: {}}}),
       mockReq({headers: {'content-type': 'application/octet-stream'}}),
     )
     assert.equal(err, null)
@@ -349,7 +348,7 @@ describe('multipartMiddleware – fileFilter', () => {
   it('passes fileFilter to multer', async () => {
     const fileFilter = (_req, _file, cb) => cb(null, true)
     const req = mockReq()
-    const mw = bodyParser({
+    const mw = bodyParserMiddleware({
       middleware: {
         multipart: {
           multer: mockMulter([]),

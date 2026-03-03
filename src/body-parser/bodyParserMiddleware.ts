@@ -7,7 +7,7 @@ import {multipartMiddleware} from "./middlewares/MultipartMiddleware.js";
 import {rawMiddleware} from "./middlewares/RawMiddleware.js";
 import {runMiddlewares} from "../utils/runMiddlewares.js";
 
-export function bodyParser(options: BodyParserOptions = {}): RequestHandler {
+export function bodyParserMiddleware(options: BodyParserOptions = {}): RequestHandler {
 
   const {
     multipartLimit = LIMIT_20_MB,
