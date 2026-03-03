@@ -5,7 +5,7 @@ import EventEmitter from "node:events";
 export type LogStreamOptions = {
   logFilePath: string
   createDirectory: boolean
-  maxRecreateAttempts?: number
+  maxRecreateAttempts?: number | undefined
 }
 
 export class LogStream {

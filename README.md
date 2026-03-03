@@ -378,18 +378,35 @@ Express middleware for HTTP access logging using [morgan](https://www.npmjs.com/
 
 ### Configuration
 
-| Option                | Type                                        | Default                     | Description                                                           |
-|-----------------------|---------------------------------------------|-----------------------------|-----------------------------------------------------------------------|
-| `output`              | `"file" \| "stdout" \| "stderr"`            | `"stdout"`                  | Target output stream                                                  |
-| `format`              | `"combined" \| "dev" \| "common" \| "tiny"` | `"dev"`                     | Log format (see morgan documentation)                                 |
-| `path`                | `string`                                    | —                           | Directory for log files (required if `output` is `"file"`)            |
-| `filename`            | `string \| () => string`                    | `access_log_YYYY_MM_DD.log` | Log filename or a function returning one                              |
-| `skip`                | `(req) => boolean`                          | —                           | Optional filter function to skip specific requests                    |
-| `enabled`             | `boolean`                                   | `true`                      | Set to `false` to disable logging entirely                            |
-| `createDirectory`     | `boolean`                                   | `true`                      | Automatically create the log directory if it does not exist           |
-| `maxRecreateAttempts` | `number`                                    | `3`                         | Maximum number of attempts to recreate the log stream after a failure |
+| Option                 | Type                                        | Default                     | Description                                                           |
+|------------------------|---------------------------------------------|-----------------------------|-----------------------------------------------------------------------|
+| `output`               | `"file" \| "stdout" \| "stderr"`            | `"stdout"`                  | Target output stream                                                  |
+| `format`               | `"combined" \| "dev" \| "common" \| "tiny"` | `"dev"`                     | Log format (see morgan documentation)                                 |
+| `path`                 | `string`                                    | —                           | Directory for log files (required if `output` is `"file"`)            |
+| `filename`             | `string \| () => string`                    | `access_log_YYYY_MM_DD.log` | Log filename or a function returning one                              |
+| `skip`                 | `(req) => boolean`                          | —                           | Optional filter function to skip specific requests                    |
+| `enabled`              | `boolean`                                   | `true`                      | Set to `false` to disable logging entirely                            |
+| `createDirectory`      | `boolean`                                   | `true`                      | Automatically create the log directory if it does not exist           |
+| `maxRecreateAttempts`  | `number`                                    | `3`                         | Maximum number of attempts to recreate the log stream after a failure |
+| `includeRequestId`     | `boolean`                                   | `false`                     | Append `rid:<requestId>` to every log line                            |
+| `includeCorrelationId` | `boolean`                                   | `false`                     | Append `cid:<correlationId>` to every log line                        |
 
 ---
+
+When both `requestIdMiddleware` and `accessLogMiddleware` are active via `applyMiddlewares`, `includeRequestId` and
+`includeCorrelationId` are enabled automatically. To opt out:
+
+```ts
+app.use(applyMiddlewares({
+  requestId: {},
+  accessLog: {
+    includeRequestId: false,
+    includeCorrelationId: false
+  }
+}))
+```
+
+----
 
 ### Log File Naming
 
