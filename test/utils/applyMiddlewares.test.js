@@ -17,6 +17,7 @@ function mockReq(overrides = {}) {
       const ct = this.headers['content-type'] || ''
       return ct.includes(type) ? type : false
     },
+    on() { return this },
     ...overrides
   }
 }

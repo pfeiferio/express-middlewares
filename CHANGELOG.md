@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-03-09
+
+### Added
+
+- `shutdownRegistry` option to `gracefulShutdownMiddleware` for coordinated shutdown across multiple middleware instances via `request-drain`
+- `signal` is now optional when `shutdownRegistry` is provided
+
+### Fixed
+
+- `gracefulShutdownMiddleware` now listens to `req` close events instead of `res` close events
+
 ## [1.7.0] - 2026-03-03
 
 ### Added

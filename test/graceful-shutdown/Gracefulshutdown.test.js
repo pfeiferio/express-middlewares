@@ -1,5 +1,6 @@
 import {describe, it} from 'node:test'
 import assert from 'node:assert/strict'
+import {ShutdownRegistry} from 'request-drain'
 
 import {gracefulShutdownMiddleware} from '../../dist/graceful-shutdown/gracefulShutdownMiddleware.js'
 import {createShutdownSignal} from '../../dist/graceful-shutdown/utils/createShutdownSignal.js'
@@ -8,7 +9,19 @@ import EventEmitter from "node:events";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function mockReq(overrides = {}) {
-  return {headers: {}, ...overrides}
+  const listeners = {}
+  return {
+    headers: {},
+    on(event, cb) {
+      listeners[event] = cb
+      return this
+    },
+    emit(event) {
+      listeners[event]?.()
+    },
+    _listeners: listeners,
+    ...overrides
+  }
 }
 
 function mockRes() {
@@ -81,13 +94,13 @@ describe('createShutdownSignal', () => {
 // ─── validation ───────────────────────────────────────────────────────────────
 
 describe('gracefulShutdownMiddleware – validation', () => {
-  it('throws when signal is missing', () => {
+  it('throws when neither signal nor shutdownRegistry is provided', () => {
     assert.throws(
       () => gracefulShutdownMiddleware({
         onDrain: () => {
         }
       }),
-      /signal is required/,
+      /signal or ShutdownRegistry is required/,
     )
   })
 
@@ -274,14 +287,14 @@ describe('gracefulShutdownMiddleware – abort with pending requests', () => {
       onDrain: () => drained = true
     })
 
-    const res = mockRes()
-    mw(mockReq(), res, mockNext())
+    const req = mockReq()
+    mw(req, mockRes(), mockNext())
 
     abort()
     await new Promise(resolve => setTimeout(resolve, 10))
     assert.equal(drained, false)
 
-    res.emit('close')
+    req.emit('close')
     await new Promise(resolve => setTimeout(resolve, 10))
     assert.equal(drained, true)
   })
@@ -314,14 +327,14 @@ describe('gracefulShutdownMiddleware – abort with pending requests', () => {
       timeout: 50
     })
 
-    const res = mockRes()
-    mw(mockReq(), res, mockNext())
+    const req = mockReq()
+    mw(req, mockRes(), mockNext())
 
     abort()
     await new Promise(resolve => setTimeout(resolve, 100))
     assert.equal(drainCount, 1)
 
-    res.emit('close')
+    req.emit('close')
     await new Promise(resolve => setTimeout(resolve, 10))
     assert.equal(drainCount, 1)
   })
@@ -340,8 +353,7 @@ describe('gracefulShutdownMiddleware – timeout', () => {
       timeout: 50
     })
 
-    const res = mockRes()
-    mw(mockReq(), res, mockNext())
+    mw(mockReq(), mockRes(), mockNext())
 
     abort()
     await new Promise(resolve => setTimeout(resolve, 100))
@@ -360,8 +372,7 @@ describe('gracefulShutdownMiddleware – timeout', () => {
       timeout: -1
     })
 
-    const res = mockRes()
-    mw(mockReq(), res, mockNext())
+    mw(mockReq(), mockRes(), mockNext())
 
     abort()
     await new Promise(resolve => setTimeout(resolve, 10))
@@ -379,8 +390,7 @@ describe('gracefulShutdownMiddleware – timeout', () => {
       timeout: 0
     })
 
-    const res = mockRes()
-    mw(mockReq(), res, mockNext())
+    mw(mockReq(), mockRes(), mockNext())
 
     abort()
     await new Promise(resolve => setTimeout(resolve, 50))
@@ -393,5 +403,97 @@ describe('gracefulShutdownMiddleware – timeout', () => {
     assert.equal(signal.aborted, false)
     mockProcess.emit('SIGINT')
     assert.equal(signal.aborted, true)
+  })
+})
+
+// ─── shutdownRegistry ─────────────────────────────────────────────────────────
+
+describe('gracefulShutdownMiddleware – shutdownRegistry', () => {
+  it('calls next() and registers request with shutdownHandle', () => {
+    const registry = new ShutdownRegistry()
+    const mw = gracefulShutdownMiddleware({
+      shutdownRegistry: registry,
+      onDrain: () => {}
+    })
+
+    const next = mockNext()
+    mw(mockReq(), mockRes(), next)
+    assert.equal(next.wasCalled(), true)
+  })
+
+  it('drains immediately after shutdown() when no pending requests', async () => {
+    const registry = new ShutdownRegistry()
+    let info = null
+
+    gracefulShutdownMiddleware({
+      shutdownRegistry: registry,
+      onDrain: (i) => info = i
+    })
+
+    await registry.shutdown()
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    assert.ok(info !== null)
+    assert.equal(info.isTimeout, false)
+  })
+
+  it('drains after all requests close', async () => {
+    const registry = new ShutdownRegistry()
+    let drained = false
+
+    const mw = gracefulShutdownMiddleware({
+      shutdownRegistry: registry,
+      onDrain: () => drained = true
+    })
+
+    const req = mockReq()
+    mw(req, mockRes(), mockNext())
+
+    const shutdownPromise = registry.shutdown()
+    await new Promise(resolve => setTimeout(resolve, 10))
+    assert.equal(drained, false)
+
+    req.emit('close')
+    await shutdownPromise
+    await new Promise(resolve => setTimeout(resolve, 10))
+    assert.equal(drained, true)
+  })
+
+  it('rejects new requests after shutdown() is called', async () => {
+    const registry = new ShutdownRegistry()
+    let rejected = false
+
+    const mw = gracefulShutdownMiddleware({
+      shutdownRegistry: registry,
+      onDrain: () => {},
+      onReject: () => rejected = true
+    })
+
+    await registry.shutdown()
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    mw(mockReq(), mockRes(), mockNext())
+    assert.equal(rejected, true)
+  })
+
+  it('forced drain after timeout with isTimeout: true', async () => {
+    const registry = new ShutdownRegistry()
+    let info = null
+
+    const mw = gracefulShutdownMiddleware({
+      shutdownRegistry: registry,
+      onDrain: (i) => info = i,
+      timeout: 50
+    })
+
+    mw(mockReq(), mockRes(), mockNext())
+
+    // Do not await – waitUntilIdle uses .unref() internally, so we need a
+    // ref'd timer to keep the event loop alive until the timeout fires.
+    registry.shutdown()
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    assert.ok(info !== null)
+    assert.equal(info.isTimeout, true)
   })
 })

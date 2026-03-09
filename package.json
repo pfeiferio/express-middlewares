@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "@pfeiferio/express-middlewares",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "author": "Pascal Pfeifer <pascal@pfeifer.zone>",
   "license": "MIT",
   "sideEffects": false,
@@ -64,6 +64,7 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^25.3.2",
     "express": "^5.2.1",
+    "request-drain": "^1.2.0",
     "typescript": "^5.9.3"
   },
   "publishConfig": {

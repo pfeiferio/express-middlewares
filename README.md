@@ -139,13 +139,35 @@ app.use(gracefulShutdownMiddleware({
 
 ### Configuration
 
-| Option        | Type                                                              | Default           | Description                                                                               |
-|---------------|-------------------------------------------------------------------|-------------------|-------------------------------------------------------------------------------------------|
-| `signal`      | `AbortSignal`                                                     | —                 | Required. Use `createShutdownSignal()` or provide your own `AbortController.signal`       |
-| `timeout`     | `number`                                                          | `10000`           | Timeout in ms before forced drain. `-1` = immediate, `0` = wait forever, `>0` = wait X ms |
-| `onDrain`     | `(info: { pendingRequests: number, isTimeout: boolean }) => void` | —                 | Required. Called when all pending requests are drained or timeout is reached              |
-| `onReject`    | `RequestHandler`                                                  | 503 JSON response | Called for every incoming request while shutting down                                     |
-| `forceReject` | `boolean`                                                         | `false`           | Forces all requests to be rejected immediately. For testing your `onReject` handler only  |
+| Option             | Type                                                              | Default           | Description                                                                                         |
+|--------------------|-------------------------------------------------------------------|-------------------|-----------------------------------------------------------------------------------------------------|
+| `signal`           | `AbortSignal`                                                     | —                 | AbortSignal to trigger shutdown. Required if `shutdownRegistry` is not provided                     |
+| `shutdownRegistry` | `ShutdownRegistry`                                                | —                 | Alternative to `signal`. Coordinates shutdown across multiple middleware instances (`request-drain`) |
+| `timeout`          | `number`                                                          | `10000`           | Timeout in ms before forced drain. `-1` = immediate, `0` = wait forever, `>0` = wait X ms          |
+| `onDrain`          | `(info: { pendingRequests: number, isTimeout: boolean }) => void` | —                 | Required. Called when all pending requests are drained or timeout is reached                        |
+| `onReject`         | `RequestHandler`                                                  | 503 JSON response | Called for every incoming request while shutting down                                               |
+| `forceReject`      | `boolean`                                                         | `false`           | Forces all requests to be rejected immediately. For testing your `onReject` handler only            |
+
+### Usage with ShutdownRegistry
+
+Use `ShutdownRegistry` from [`request-drain`](https://www.npmjs.com/package/request-drain) when you need coordinated
+shutdown across multiple middleware instances (e.g. in multi-tenant or layered setups):
+
+```ts
+import {ShutdownRegistry} from "request-drain"
+import {gracefulShutdownMiddleware} from "@pfeiferio/express-middlewares"
+
+const registry = new ShutdownRegistry()
+const server = app.listen(3000)
+
+app.use(gracefulShutdownMiddleware({
+  shutdownRegistry: registry,
+  onDrain: () => server.close(() => process.exit(0))
+}))
+
+// Trigger shutdown from anywhere:
+await registry.shutdown()
+```
 
 ### createShutdownSignal
 

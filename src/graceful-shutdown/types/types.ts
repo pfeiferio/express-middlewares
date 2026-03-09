@@ -1,4 +1,5 @@
 import type {RequestHandler} from "express";
+import {ShutdownRegistry} from "request-drain";
 
 export type DrainInfo = {
   pendingRequests: number
@@ -6,11 +7,15 @@ export type DrainInfo = {
 }
 
 export type GracefulShutdownOptions = {
+
+  shutdownRegistry?: ShutdownRegistry
+
   /**
    * AbortSignal to trigger graceful shutdown.
    * Use createShutdownSignal() to create one that listens to SIGINT/SIGTERM.
+   * Required if shutdownRegistry is not provided.
    */
-  signal: AbortSignal
+  signal?: AbortSignal
 
   /**
    * Timeout in ms before forced drain.

@@ -24,6 +24,7 @@ const defaultOnReject: RequestHandler = (_req, res) =>
 export function gracefulShutdownMiddleware(options: GracefulShutdownOptions): RequestHandler {
 
   const {
+    shutdownRegistry,
     signal,
     timeout = 10000,
     onDrain,
@@ -42,8 +43,8 @@ export function gracefulShutdownMiddleware(options: GracefulShutdownOptions): Re
     console.warn('gracefulShutdownMiddleware: forceReject is enabled — this should only be used for testing and must not be used in production.')
   }
 
-  if (!signal) {
-    throw new Error('gracefulShutdownMiddleware: signal is required')
+  if (!signal && !shutdownRegistry) {
+    throw new Error('gracefulShutdownMiddleware: signal or ShutdownRegistry is required')
   }
 
   if (!onDrain) {
@@ -74,14 +75,20 @@ export function gracefulShutdownMiddleware(options: GracefulShutdownOptions): Re
     if (states.drained) return
     states.drained = true
     eventHandle.emit('drain', {
-      pendingRequests: pendingRequests.size,
+      pendingRequests: signal ? pendingRequests.size : shutdownHandle?.pendingCount,
       isTimeout
     })
   }
 
   eventHandle.once('drain', onDrain)
+  const shutdownHandle = shutdownRegistry?.register()
 
-  signal.addEventListener('abort', () => {
+  shutdownHandle?.onAbort(async () => {
+    states.shuttingDown = true
+    const clean = await shutdownHandle.waitUntilIdle(timeout)
+    emitDrain(!clean)
+  })
+  signal?.addEventListener('abort', () => {
     states.shuttingDown = true
 
     if (pendingRequests.size === 0) {
@@ -105,10 +112,15 @@ export function gracefulShutdownMiddleware(options: GracefulShutdownOptions): Re
       return
     }
 
+    if (shutdownHandle) {
+      shutdownHandle?.request(req)
+      return next()
+    }
+
     const id = Symbol()
     pendingRequests.add(id)
 
-    res.on('close', () => {
+    req.on('close', () => {
       pendingRequests.delete(id)
 
       if (states.shuttingDown && pendingRequests.size === 0) {
