@@ -7,9 +7,14 @@ export const prepareOptions = (options: ApplyMiddlewaresOptions): ApplyMiddlewar
   options = {...options}
 
   if (options.gracefulShutdown !== false) {
-    if (!options.signal || !options.onDrain) {
+    if (!options.signal && !options.shutdownRegistry) {
       throw new Error(
-        'applyMiddlewares: gracefulShutdown requires "signal" and "onDrain". Set gracefulShutdown: false to disable.'
+        'applyMiddlewares: gracefulShutdown requires "signal" or "shutdownRegistry". Set gracefulShutdown: false to disable.'
+      )
+    }
+    if (!options.onDrain) {
+      throw new Error(
+        'applyMiddlewares: gracefulShutdown requires "onDrain". Set gracefulShutdown: false to disable.'
       )
     }
   }

@@ -8,14 +8,16 @@ import {csrfMiddleware, type CsrfMiddlewareOptions} from "@pfeiferio/express-csr
 import {prepareOptions} from "./prepareOptions.js";
 import cookieParser from 'cookie-parser'
 import {fullUrlMiddleware} from "../full-url/index.js";
+import type {ShutdownRegistry} from "request-drain";
 
 export type ApplyMiddlewaresOptions = {
   fullUrl?: boolean
   signal?: AbortSignal | false
+  shutdownRegistry?: ShutdownRegistry
   onDrain?: (info: DrainInfo) => void
   accessLog?: AccessLogOptions | false
   bodyParser?: BodyParserOptions | false
-  gracefulShutdown?: Omit<GracefulShutdownOptions, 'signal' | 'onDrain'> | false
+  gracefulShutdown?: Omit<GracefulShutdownOptions, 'signal' | 'onDrain' | 'shutdownRegistry'> | false
   requestId?: RequestChainOptions | false
   csrf?: CsrfMiddlewareOptions | false
   cookieParser?: boolean | { secret?: string | string[], options?: cookieParser.CookieParseOptions }
@@ -36,7 +38,8 @@ export function applyMiddlewares(options: ApplyMiddlewaresOptions): RequestHandl
     options.csrf !== false && csrfMiddleware(options.csrf!),
     options.gracefulShutdown !== false && gracefulShutdownMiddleware({
       ...options.gracefulShutdown,
-      signal: options.signal as AbortSignal,
+      ...(options.signal ? {signal: options.signal as AbortSignal} : {}),
+      ...(options.shutdownRegistry ? {shutdownRegistry: options.shutdownRegistry} : {}),
       onDrain: options.onDrain!
     })
   ].filter((mw): mw is RequestHandler => !!mw)

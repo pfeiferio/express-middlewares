@@ -2,6 +2,7 @@ import {describe, it} from 'node:test'
 import assert from 'node:assert/strict'
 
 import {applyMiddlewares} from '../../dist/index.js'
+import {ShutdownRegistry} from 'request-drain'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -143,6 +144,13 @@ describe('applyMiddlewares – gracefulShutdown', () => {
   it('signal + onDrain – gracefulShutdown active, calls next()', async () => {
     const {signal} = makeSignal()
     const mw = applyMiddlewares({signal, onDrain: () => {}, csrf: false})
+    const {err} = await runMw(mw)
+    assert.equal(err, null)
+  })
+
+  it('shutdownRegistry + onDrain – active, calls next()', async () => {
+    const shutdownRegistry = new ShutdownRegistry()
+    const mw = applyMiddlewares({shutdownRegistry, onDrain: () => {}, csrf: false})
     const {err} = await runMw(mw)
     assert.equal(err, null)
   })

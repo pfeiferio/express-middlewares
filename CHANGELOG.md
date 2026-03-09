@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-03-09
+
+### Added
+
+- `shutdownRegistry` option to `applyMiddlewares` for better integration with `request-drain`
+- Support for using `gracefulShutdown` with either a `signal` or a `shutdownRegistry`
+
+### Changed
+
+- Updated `prepareOptions` validation to require at least one shutdown mechanism (`signal` or `shutdownRegistry`)
+
 ## [1.8.0] - 2026-03-09
 
 ### Added

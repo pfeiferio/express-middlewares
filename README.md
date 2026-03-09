@@ -99,22 +99,36 @@ app.use(applyMiddlewares({
 server.value = app.listen(3000)
 ```
 
+```ts
+import {applyMiddlewares} from "@pfeiferio/express-middlewares"
+import {ShutdownRegistry} from "request-drain"
+
+const registry = new ShutdownRegistry()
+
+app.use(applyMiddlewares({
+  shutdownRegistry: registry, // replaces the need for 'signal'
+  onDrain: () => server.close(),
+  // ... other middlewares
+}))
+ ```
+
 `applyMiddlewares` wires middlewares in this fixed order: `fullUrl` → `requestId` → `accessLog` → `bodyParser` →
 `cookieParser` → `csrf` → `gracefulShutdown`.
 
 ### applyMiddlewares options
 
-| Option             | Type                                                           | Default | Description                                                                                     |
-|--------------------|----------------------------------------------------------------|---------|-------------------------------------------------------------------------------------------------|
-| `signal`           | `AbortSignal`                                                  | —       | Required when `gracefulShutdown` is enabled. Use `createShutdownSignal()`                       |
-| `onDrain`          | `(info: DrainInfo) => void`                                    | —       | Required when `gracefulShutdown` is enabled. Called when all pending requests have drained      |
-| `fullUrl`          | `boolean`                                                      | `true`  | Attach `req.fullUrl` and `req.hostUrl` to every request. Set to `false` to disable              |
-| `accessLog`        | `AccessLogOptions \| false`                                    | `{}`    | Options for `accessLogMiddleware`. Set to `false` to disable                                    |
-| `bodyParser`       | `BodyParserOptions \| false`                                   | `{}`    | Options for `bodyParser`. Set to `false` to disable                                             |
-| `cookieParser`     | `boolean \| { secret?: string \| string[], options?: object }` | `true`  | Enable `cookie-parser`. Pass `false` to disable (requires `csrf.csrfSecretCookie.cookieReader`) |
-| `csrf`             | `CsrfMiddlewareOptions \| false`                               | —       | Options for `csrfMiddleware`. Omit or set to `false` to disable                                 |
-| `gracefulShutdown` | `GracefulShutdownOptions \| false`                             | `{}`    | Options for `gracefulShutdownMiddleware`. Set to `false` to disable                             |
-| `requestId`        | `RequestChainOptions \| false`                                 | `{}`    | Options for `requestIdMiddleware`. Set to `false` to disable                                    |
+| Option             | Type                                                           | Default | Description                                                                                                     |
+|--------------------|----------------------------------------------------------------|---------|-----------------------------------------------------------------------------------------------------------------|
+| `signal`           | `AbortSignal`                                                  | —       | Required when `gracefulShutdown` is enabled unless `shutdownRegistry` is provided. Use `createShutdownSignal()` |
+| `shutdownRegistry` | `ShutdownRegistry`                                             | —       | Alternative to `signal`. Coordinates shutdown via `request-drain`.                                              |
+| `onDrain`          | `(info: DrainInfo) => void`                                    | —       | Required when `gracefulShutdown` is enabled. Called when all pending requests have drained                      |
+| `fullUrl`          | `boolean`                                                      | `true`  | Attach `req.fullUrl` and `req.hostUrl` to every request. Set to `false` to disable                              |
+| `accessLog`        | `AccessLogOptions \| false`                                    | `{}`    | Options for `accessLogMiddleware`. Set to `false` to disable                                                    |
+| `bodyParser`       | `BodyParserOptions \| false`                                   | `{}`    | Options for `bodyParser`. Set to `false` to disable                                                             |
+| `cookieParser`     | `boolean \| { secret?: string \| string[], options?: object }` | `true`  | Enable `cookie-parser`. Pass `false` to disable (requires `csrf.csrfSecretCookie.cookieReader`)                 |
+| `csrf`             | `CsrfMiddlewareOptions \| false`                               | —       | Options for `csrfMiddleware`. Omit or set to `false` to disable                                                 |
+| `gracefulShutdown` | `GracefulShutdownOptions \| false`                             | `{}`    | Options for `gracefulShutdownMiddleware`. Set to `false` to disable                                             |
+| `requestId`        | `RequestChainOptions \| false`                                 | `{}`    | Options for `requestIdMiddleware`. Set to `false` to disable                                                    |
 
 ---
 
@@ -139,14 +153,14 @@ app.use(gracefulShutdownMiddleware({
 
 ### Configuration
 
-| Option             | Type                                                              | Default           | Description                                                                                         |
-|--------------------|-------------------------------------------------------------------|-------------------|-----------------------------------------------------------------------------------------------------|
-| `signal`           | `AbortSignal`                                                     | —                 | AbortSignal to trigger shutdown. Required if `shutdownRegistry` is not provided                     |
+| Option             | Type                                                              | Default           | Description                                                                                          |
+|--------------------|-------------------------------------------------------------------|-------------------|------------------------------------------------------------------------------------------------------|
+| `signal`           | `AbortSignal`                                                     | —                 | AbortSignal to trigger shutdown. Required if `shutdownRegistry` is not provided                      |
 | `shutdownRegistry` | `ShutdownRegistry`                                                | —                 | Alternative to `signal`. Coordinates shutdown across multiple middleware instances (`request-drain`) |
-| `timeout`          | `number`                                                          | `10000`           | Timeout in ms before forced drain. `-1` = immediate, `0` = wait forever, `>0` = wait X ms          |
-| `onDrain`          | `(info: { pendingRequests: number, isTimeout: boolean }) => void` | —                 | Required. Called when all pending requests are drained or timeout is reached                        |
-| `onReject`         | `RequestHandler`                                                  | 503 JSON response | Called for every incoming request while shutting down                                               |
-| `forceReject`      | `boolean`                                                         | `false`           | Forces all requests to be rejected immediately. For testing your `onReject` handler only            |
+| `timeout`          | `number`                                                          | `10000`           | Timeout in ms before forced drain. `-1` = immediate, `0` = wait forever, `>0` = wait X ms            |
+| `onDrain`          | `(info: { pendingRequests: number, isTimeout: boolean }) => void` | —                 | Required. Called when all pending requests are drained or timeout is reached                         |
+| `onReject`         | `RequestHandler`                                                  | 503 JSON response | Called for every incoming request while shutting down                                                |
+| `forceReject`      | `boolean`                                                         | `false`           | Forces all requests to be rejected immediately. For testing your `onReject` handler only             |
 
 ### Usage with ShutdownRegistry
 
